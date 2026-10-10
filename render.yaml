@@ -1,0 +1,72 @@
+# ============================================================
+# Render Blueprint — CareerBridge AI Platform
+# ============================================================
+# HOW TO USE (one-time setup):
+#   1. Push this repo to GitHub (don't commit real .env files).
+#   2. Render Dashboard -> New -> Blueprint -> select this repo.
+#      Render reads this file and creates both services below.
+#   3. Fill in the secrets it prompts for (MONGO_URI, JWT_SECRET,
+#      GEMINI_API_KEY, CLOUDINARY_*). These are marked sync: false
+#      so Render asks for them instead of storing values in git.
+#   4. After the API deploys, copy its URL
+#      (https://career-bridge-api.onrender.com) and set it as
+#      VITE_API_URL + VITE_SOCKET_URL on the frontend service,
+#      then set CLIENT_URL on the API to the frontend URL and redeploy.
+#   5. CI/CD: both services auto-deploy on every push to `main`
+#      (Auto-Deploy is on by default for blueprint services).
+#
+# NOTE: Vite bakes VITE_* vars in at BUILD time, so frontend env
+# vars must be set BEFORE the frontend builds.
+# ============================================================
+
+services:
+  # ---------------- BACKEND (Node + Express + Socket.IO) ----------------
+  - type: web
+    name: career-bridge-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    plan: free
+    autoDeploy: true
+    envVars:
+      # Render injects PORT automatically — do NOT set it here.
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CLIENT_URL
+        sync: false # e.g. https://career-bridge-client.onrender.com
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: SOCKET_DEBUG
+        value: "off"
+
+  # ---------------- FRONTEND (Vite static site) ----------------
+  - type: web
+    name: career-bridge-client
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    plan: free
+    autoDeploy: true
+    # SPA fallback so React Router routes work on refresh/direct links
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        sync: false # e.g. https://career-bridge-api.onrender.com
+      - key: VITE_SOCKET_URL
+        sync: false # same as VITE_API_URL

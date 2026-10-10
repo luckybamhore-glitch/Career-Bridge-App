@@ -5,11 +5,15 @@
   "license": "ISC",
   "author": "asim khan",
   "type": "module",
-  "main": "server.js",
+  "main": "server/server.js",
   "scripts": {
+    "start": "node server/server.js",
     "server": "node server/server.js",
     "dev": "node --watch server/server.js",
-    "seed_user": "node user.js"
+    "seed_user": "node server/user.js"
+  },
+  "engines": {
+    "node": "20"
   },
   "dependencies": {
     "@google/genai": "^2.12.0",

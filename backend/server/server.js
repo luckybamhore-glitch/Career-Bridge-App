@@ -13,6 +13,7 @@ import roadmapRoutes from "../routes/roadmapRoutes.js"
 import messageRoutes from "../routes/messageRoutes.js"
 import dashboardRoutes from "../routes/dashboardRoutes.js"
 import cors from "cors"
+import mongoose from "mongoose"
 import http from "http"
 import { Server } from "socket.io"
 import { chatHandler, onlineUsers } from "../socket/chatHandel.js"
@@ -93,6 +94,20 @@ app.use(express.urlencoded({ extended: true }))
 app.get("/" , (req , res) => {
     res.status(200).json({
         message : "WELCOME TO NEXT-STEP API's "
+    })
+})
+
+// Health check for Render (no auth). Reports 503 while MongoDB is
+// disconnected so Render restarts/replaces a DB-less instance instead
+// of serving traffic that would all fail. dbConfig only logs on
+// failure, so this is the safety net.
+app.get("/api/health" , (req , res) => {
+    const dbConnected = mongoose.connection.readyState === 1
+    res.status(dbConnected ? 200 : 503).json({
+        status : dbConnected ? "ok" : "degraded",
+        db : dbConnected ? "connected" : "disconnected",
+        uptime : process.uptime(),
+        timestamp : new Date().toISOString()
     })
 })
 // Auth Routes
