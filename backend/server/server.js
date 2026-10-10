@@ -15,10 +15,22 @@ import dashboardRoutes from "../routes/dashboardRoutes.js"
 import cors from "cors"
 import mongoose from "mongoose"
 import http from "http"
+import path from "path"
+import fs from "fs"
+import { fileURLToPath } from "url"
 import { Server } from "socket.io"
 import { chatHandler, onlineUsers } from "../socket/chatHandel.js"
 import socketAuthMiddleware from "../socket/socketAuth.js"
 const PORT = process.env.PORT || 3000
+
+// ESM equivalent of __dirname (server.js lives in backend/server/)
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+// Single-service deploy: Express also serves the built Vite frontend.
+// Repo layout: <root>/frontend/dist  <->  <root>/backend/server/server.js
+const clientDist = path.join(__dirname, "..", "..", "frontend", "dist")
+const clientIndex = path.join(clientDist, "index.html")
+const serveClient = fs.existsSync(clientIndex)
 
 const app = express()
 const server = http.createServer(app)
@@ -91,7 +103,8 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
 
-app.get("/" , (req , res) => {
+// API root probe ("/" itself serves the frontend when built)
+app.get("/api" , (req , res) => {
     res.status(200).json({
         message : "WELCOME TO NEXT-STEP API's "
     })
@@ -135,6 +148,21 @@ app.use("/api/messages" , messageRoutes)
 app.use("/api/user" , dashboardRoutes)
 // alias so /api/dashboard also works
 app.use("/api" , dashboardRoutes)
+
+// ---- Single-service frontend hosting ----
+// Serves frontend/dist (built by `npm run build` in frontend/).
+// Skipped automatically in local backend-only dev (no dist present).
+if (serveClient) {
+    app.use(express.static(clientDist))
+    // SPA fallback for React Router: any non-API GET serves index.html.
+    // (Socket.io intercepts /socket.io before Express, so it is unaffected.)
+    app.use((req , res , next) => {
+        if (req.method === "GET" && !req.path.startsWith("/api")) {
+            return res.sendFile(clientIndex)
+        }
+        next()
+    })
+}
 
 // error handler
 app.use(errorHandler)

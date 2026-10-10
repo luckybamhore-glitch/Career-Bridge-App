@@ -65,7 +65,7 @@
 | Database | MongoDB (Atlas or local) |
 | AI | Google Gemini (`@google/genai`) |
 | Media | Cloudinary |
-| Hosting | Netlify (frontend). The backend runs on any Node host. |
+| Hosting | Render single service (Express serves API + built frontend). |
 
 ## Architecture
 
@@ -274,20 +274,19 @@ Base URL: `http://localhost:5050`. Routes marked 🔒 require `Authorization: Be
 
 ## Deployment
 
-### Frontend (Netlify)
+### Single service (Render — recommended)
 
-`frontend/netlify.toml` and `frontend/public/_redirects` are already configured for SPA routing.
+`render.yaml` at the repo root deploys **one** web service: Express serves the API at `/api/*` (plus Socket.io) and the built Vite frontend for everything else.
 
-1. Import the repo into Netlify and set the **base directory** to `frontend`.
-2. Build command: `npm run build`. Publish directory: `dist`.
-3. Add `VITE_API_URL` and `VITE_SOCKET_URL` pointing at your deployed backend.
+1. Render Dashboard → New → Blueprint → select this repo.
+2. Fill in the prompted secrets (`MONGO_URI`, `JWT_SECRET`, `GEMINI_API_KEY`, `CLOUDINARY_*`).
+3. Done — no `VITE_*` / `CLIENT_URL` wiring needed since both share one origin. Pushes to `main` auto-deploy.
+4. Use a host/plan that supports long-lived WebSocket connections, since chat depends on Socket.io.
 
-### Backend (Render, Railway, Fly.io, VPS, etc.)
+### Split services (optional)
 
-1. Set the root directory to `backend`.
-2. Build command: `npm install`. Start command: `npm run server`.
-3. Add all backend environment variables, setting `CLIENT_URL` to your deployed frontend URL.
-4. Use a host that supports long-lived WebSocket connections, since chat depends on Socket.io.
+- **Frontend (Netlify):** base directory `frontend`, build `npm run build`, publish `dist` (`netlify.toml` + `public/_redirects` handle SPA routing). Set `VITE_API_URL` and `VITE_SOCKET_URL` to the backend URL.
+- **Backend (Render/Railway/Fly.io/VPS):** root directory `backend`, build `npm ci`, start `npm start`. Set `CLIENT_URL` to the frontend URL.
 
 ## Roadmap
 
